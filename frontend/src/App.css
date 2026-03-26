@@ -17,7 +17,7 @@ html, body, #root {
 
 /* 1️⃣ NAVBAR ALIGNMENT & GLASSMORPHISM */
 .navbar-main {
-  height: 75px; 
+  height: 70px; 
   display: flex; 
   align-items: center; 
   justify-content: space-between;
@@ -37,11 +37,12 @@ html, body, #root {
 
 .yt-search-pill { 
   display: flex; 
-  background: #121212; 
-  border: 1px solid #333; 
+  background: rgba(255, 255, 255, 0.05); 
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1); 
   border-radius: 50px; 
   width: 450px; 
-  height: 40px; 
+  height: 45px; 
   overflow: hidden; 
 }
 
@@ -55,12 +56,12 @@ html, body, #root {
 }
 
 .search-icon-btn { 
-  background: #222; 
+  background: transparent; 
   border: none; 
   width: 60px; 
-  color: #888; 
+  color: #a1a1aa; 
   cursor: pointer; 
-  border-left: 1px solid #333; 
+  border-left: 1px solid rgba(255, 255, 255, 0.1); 
 }
 
 .nav-right { 
@@ -223,7 +224,7 @@ html, body, #root {
   flex-direction: column; 
   align-items: center; 
   justify-content: center;
-  background: url('https://images.unsplash.com/photo-1505761671935-60b3a7427bad?q=80&w=2000') center/cover;
+  background: url('https://images.unsplash.com/photo-1520939817895-060bdaf4ed1b?q=80&w=2000') center/cover;
   position: relative; 
   overflow: hidden;
 }
@@ -247,14 +248,25 @@ html, body, #root {
 
 /* ✍️ COLORFUL TYPEWRITER TITLE */
 .hero-title-colorful {
-  font-size: 6rem; 
-  font-weight: 900;
-  background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #ff00c8, #ff0000);
-  background-size: 400%; 
+  font-size: 5rem; 
+  font-weight: 800;
+  background: linear-gradient(90deg, #22d3ee, #3b82f6, #a855f7, #22d3ee);
+  background-size: 300%; 
   -webkit-background-clip: text; 
   -webkit-text-fill-color: transparent;
   animation: colorRun 8s linear infinite; 
+  margin-bottom: 20px;
+  letter-spacing: -2px;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  color: #e2e8f0;
+  max-width: 600px;
+  text-align: center;
   margin-bottom: 50px;
+  line-height: 1.6;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 @keyframes colorRun { 
@@ -285,21 +297,59 @@ html, body, #root {
 }
 
 .btn-explore-glow {
-  padding: 22px 70px; 
-  font-size: 1.8rem; 
-  font-weight: 900; 
+  padding: 18px 50px; 
+  font-size: 1.2rem; 
+  font-weight: 700; 
   border-radius: 100px;
   background: linear-gradient(to right, #f97316, #ef4444); 
   border: none; 
   color: white;
   cursor: pointer; 
-  box-shadow: 0 0 40px rgba(239, 68, 68, 0.5); 
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); 
   transition: 0.3s;
 }
 
 .btn-explore-glow:hover { 
   transform: scale(1.05); 
-  box-shadow: 0 0 60px rgba(239, 68, 68, 0.8); 
+  box-shadow: 0 0 50px rgba(239, 68, 68, 0.7); 
+}
+
+.btn-glass-outline {
+  padding: 18px 50px; 
+  font-size: 1.2rem; 
+  font-weight: 600; 
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-glass-outline:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+  40% { transform: translate(-50%, -10px); }
+  60% { transform: translate(-50%, -5px); }
 }
 
 /* 3️⃣ TILES & RESULTS GRID */
