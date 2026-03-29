@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.png';
@@ -10,6 +10,7 @@ import AuthModal from './AuthModal';
 import LiveRadioModal from './LiveRadioModal';
 import LiveCameraGrid from './LiveCameraGrid';
 import LiveEarthModal from './LiveEarthModal';
+import LiveCricketModal from './LiveCricketModal';
 import LiveEarthButton from './LiveEarthButton';
 import { fetchWindyWebcams } from './mockApi';
 import './App.css';
@@ -30,8 +31,11 @@ export default function App() {
   const [text, setText] = useState("");
   const [isGridLoading, setIsGridLoading] = useState(false);
   const [isEarthOpen, setIsEarthOpen] = useState(false);
+  const [isCricketOpen, setIsCricketOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isPinned, setIsPinned] = useState(window.innerWidth >= 768);
+  const [isHovered, setIsHovered] = useState(false);
+  const [bgImage, setBgImage] = useState(localBackgroundImg);
   const fullText = "Watch the World Live";
   
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isSidebarExpanded = isPinned;
+  const isSidebarExpanded = isPinned || isHovered;
 
   // 🖱️ Refs to detect clicks outside of menus
   const accountRef = useRef(null);
@@ -101,8 +105,9 @@ export default function App() {
   const accumulatedDelta = useRef(0);
 
   const getCurrentIndex = () => {
-    if (isRadioOpen) return 2;
+    if (isCricketOpen) return 4;
     if (isEarthOpen) return 3;
+    if (isRadioOpen) return 2;
     if (showResults && !showLikes) return 1;
     return 0;
   };
@@ -110,16 +115,20 @@ export default function App() {
   const navigateTo = (index) => {
     switch (index) {
       case 0:
-        setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);
+        setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false); setIsCricketOpen(false);
         break;
       case 1:
         handleOpenLiveCameras();
+        setIsCricketOpen(false);
         break;
       case 2:
-        setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false);
+        setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false);
         break;
       case 3:
-        setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);
+        setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false);
+        break;
+      case 4:
+        setIsCricketOpen(true); setIsEarthOpen(false); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);
         break;
     }
   };
@@ -135,7 +144,7 @@ export default function App() {
       const current = getCurrentIndex();
       let next = current;
 
-      if (delta > 0 && current < 3) { next = current + 1; scrollDirection.current = 1; }
+      if (delta > 0 && current < 4) { next = current + 1; scrollDirection.current = 1; }
       else if (delta < 0 && current > 0) { next = current - 1; scrollDirection.current = -1; }
 
       if (next !== current) {
@@ -170,8 +179,11 @@ export default function App() {
     if (!query) return;
     setIsEarthOpen(false);
     setIsRadioOpen(false);
+    setIsCricketOpen(false);
     setShowResults(true);
     setShowLikes(false);
+    // Fetch contextual background
+    setBgImage(`https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80&q=city,${query}`); 
     try {
       const res = await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&q=${query}&maxResults=12&key=${API_KEY}`);
       setCameras(res.data.items.map(i => ({ id: i.id.videoId, title: i.snippet.title })));
@@ -185,6 +197,7 @@ export default function App() {
       setCameras(data);
       setIsEarthOpen(false);
       setIsRadioOpen(false);
+      setIsCricketOpen(false);
       setShowResults(true);
       setShowLikes(false);
     } catch (error) {
@@ -210,7 +223,7 @@ export default function App() {
   };
 
   const containerStyle = { 
-    '--bg-image': (!showResults && !showLikes && !isEarthOpen && !isRadioOpen) ? `url(${localBackgroundImg})` : "none",
+    '--bg-image': (!showResults && !showLikes && !isEarthOpen && !isRadioOpen && !isCricketOpen) ? `url(${bgImage})` : "none",
     filter: `brightness(${brightness}%)`, 
     backgroundColor: '#050505',
   };
@@ -218,45 +231,76 @@ export default function App() {
   return (
     <div className="worldcam-full-container layout" style={containerStyle}>
       
-      {/* Sidebar natively incorporated inside flex container layout */}
-      <aside 
+       {/* Sidebar natively incorporated inside flex container layout */}
+       <aside 
         className="sidebar"
-        style={{ width: isSidebarExpanded ? '240px' : '72px', gap: '12px', background: 'rgba(20, 25, 40, 0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px 12px', boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.05), 0 0 40px rgba(0,0,0,0.35)' }}
+        style={{ width: isSidebarExpanded ? '240px' : '72px', gap: '10px', padding: '24px 12px' }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-         <div className={`flex items-center w-full mb-6 transition-all duration-300 ${isSidebarExpanded ? 'justify-between px-2' : 'justify-center'}`}>
+         <div className={`flex items-center w-full mb-4 pb-4 transition-all duration-300 ${isSidebarExpanded ? 'justify-between px-2' : 'justify-center'}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
            <Menu size={24} onClick={() => setIsPinned(!isPinned)} className={`text-slate-300 hover:text-white transition-all duration-250 ease-in-out cursor-pointer shrink-0 hover:scale-[1.05] ${isSidebarExpanded ? 'rotate-0' : '-rotate-90'}`} title="Toggle Sidebar" />
          </div>
 
-         <button onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}} className={`${getCurrentIndex() === 0 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 0 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 0 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 0 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
-            <Home size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 0 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+         <button onClick={() => navigateTo(0)} className={`nav-btn ${getCurrentIndex() === 0 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
+            <Home size={20} className="shrink-0" />
+            <AnimatePresence>
+              {isSidebarExpanded && (
+                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Home</motion.span>
+              )}
+            </AnimatePresence>
          </button>
 
-         <button onClick={handleOpenLiveCameras} className={`${getCurrentIndex() === 1 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 1 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 1 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 1 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
-            {isGridLoading ? <Loader2 size={20} className="animate-spin text-slate-400 shrink-0" /> : <Camera size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 1 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />}
+         <button onClick={() => navigateTo(1)} className={`nav-btn ${getCurrentIndex() === 1 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
+            {isGridLoading ? <Loader2 size={20} className="animate-spin shrink-0" /> : <Camera size={20} className="shrink-0" />}
+            <AnimatePresence>
+              {isSidebarExpanded && (
+                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Gallery</motion.span>
+              )}
+            </AnimatePresence>
          </button>
 
-         <button onClick={() => {setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false);}} className={`${getCurrentIndex() === 2 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 2 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 2 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 2 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
-            <Radio size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 2 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+         <button onClick={() => navigateTo(2)} className={`nav-btn ${getCurrentIndex() === 2 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
+            <Radio size={20} className="shrink-0" />
+            <AnimatePresence>
+              {isSidebarExpanded && (
+                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Live</motion.span>
+              )}
+            </AnimatePresence>
          </button>
 
-         <button onClick={() => {setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);}} className={`${getCurrentIndex() === 3 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 3 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 3 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 3 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
-            <Map size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 3 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+         <button onClick={() => navigateTo(3)} className={`nav-btn ${getCurrentIndex() === 3 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
+            <Map size={20} className="shrink-0" />
+            <AnimatePresence>
+              {isSidebarExpanded && (
+                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Map</motion.span>
+              )}
+            </AnimatePresence>
+         </button>
+
+         <button onClick={() => navigateTo(4)} className={`nav-btn ${getCurrentIndex() === 4 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
+            <Trophy size={20} className="shrink-0" />
+            <AnimatePresence>
+              {isSidebarExpanded && (
+                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Cricket</motion.span>
+              )}
+            </AnimatePresence>
          </button>
 
          {/* Floating Collapse Button on Edge */}
          <button 
            onClick={() => setIsPinned(!isPinned)}
            className="absolute -right-3 top-32 w-6 h-6 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all z-[200]"
-           style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', boxShadow: '0 0 10px rgba(59,130,246,0.5)', border: '1px solid rgba(255,255,255,0.3)' }}
+           style={{ background: 'linear-gradient(90deg, #2dd4bf, #3b82f6)', boxShadow: '0 0 10px rgba(59,130,246,0.3)', border: '1px solid rgba(255,255,255,0.2)' }}
          >
-           {isSidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+           {isPinned ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
          </button>
       </aside>
 
       {/* Main Content Vertical Layout Wrapper */}
       <div className="content">
         
-        <nav className="navbar navbar-main" style={{ height: '70px', width: '100%', position: 'relative', flexShrink: 0, zIndex: 100, background: 'rgba(20,25,40,0.55)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center' }}>
+        <nav className="navbar navbar-main" style={{ width: '100%' }}>
           {/* 📸 CUSTOM LOGO SECTION */}
           <div className="custom-logo" onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}}>
             <div className="logo-shutter">
@@ -359,6 +403,10 @@ export default function App() {
           <motion.main key="radio" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
             <LiveRadioModal />
           </motion.main>
+        ) : isCricketOpen ? (
+          <motion.main key="cricket" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
+            <LiveCricketModal />
+          </motion.main>
         ) : !showResults ? (
           <motion.header key="hero" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="hero-full-view">
             <div className="hero-dark-mask" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.75))' }}></div>
@@ -376,11 +424,8 @@ export default function App() {
               <h1 className="hero-title-colorful text-center" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>{text}<span className="blink">|</span></h1>
               <p className="hero-subtitle">Explore live cameras from cities, beaches, streets and landmarks worldwide.</p>
               
-              <div className="flex gap-6 mt-6 flex-wrap justify-center">
+              <div className="flex mt-6 justify-center">
                 <button className="btn-explore-glow" onClick={() => handleSearch('live webcam')}>Start Exploring</button>
-                <button className="btn-glass-outline" onClick={handleOpenLiveCameras} disabled={isGridLoading}>
-                  {isGridLoading ? "Loading..." : "View Live Cameras"}
-                </button>
               </div>
             </div>
 
