@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu } from 'lucide-react';
+import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.png';
@@ -32,7 +32,6 @@ export default function App() {
   const [isEarthOpen, setIsEarthOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isPinned, setIsPinned] = useState(window.innerWidth >= 768);
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const fullText = "Watch the World Live";
   
   useEffect(() => {
@@ -45,7 +44,7 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isSidebarExpanded = isPinned || (!isMobile && isSidebarHovered);
+  const isSidebarExpanded = isPinned;
 
   // 🖱️ Refs to detect clicks outside of menus
   const accountRef = useRef(null);
@@ -95,8 +94,82 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSearch = async (query) => {
+  // 🖱️ Scroll-to-navigate: smooth directional view cycling
+  const scrollCooldown = useRef(false);
+  const scrollDirection = useRef(1); // 1 = down, -1 = up
+  const rafId = useRef(null);
+  const accumulatedDelta = useRef(0);
+
+  const getCurrentIndex = () => {
+    if (isRadioOpen) return 2;
+    if (isEarthOpen) return 3;
+    if (showResults && !showLikes) return 1;
+    return 0;
+  };
+
+  const navigateTo = (index) => {
+    switch (index) {
+      case 0:
+        setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);
+        break;
+      case 1:
+        handleOpenLiveCameras();
+        break;
+      case 2:
+        setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false);
+        break;
+      case 3:
+        setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);
+        break;
+    }
+  };
+
+  useEffect(() => {
+    const processScroll = () => {
+      const delta = accumulatedDelta.current;
+      accumulatedDelta.current = 0;
+      rafId.current = null;
+
+      if (scrollCooldown.current || Math.abs(delta) < 40) return;
+
+      const current = getCurrentIndex();
+      let next = current;
+
+      if (delta > 0 && current < 3) { next = current + 1; scrollDirection.current = 1; }
+      else if (delta < 0 && current > 0) { next = current - 1; scrollDirection.current = -1; }
+
+      if (next !== current) {
+        scrollCooldown.current = true;
+        navigateTo(next);
+        setTimeout(() => { scrollCooldown.current = false; }, 700);
+      }
+    };
+
+    const handleWheel = (e) => {
+      accumulatedDelta.current += e.deltaY;
+      if (!rafId.current) {
+        rafId.current = requestAnimationFrame(processScroll);
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, [showResults, showLikes, isRadioOpen, isEarthOpen]);
+
+  // Smooth directional transition variants
+  const pageVariants = {
+    initial: (dir) => ({ opacity: 0, y: dir * 60, scale: 0.98 }),
+    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+    exit: (dir) => ({ opacity: 0, y: dir * -40, scale: 0.98, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }),
+  };
+
+  const handleSearch = async (query = text) => {
     if (!query) return;
+    setIsEarthOpen(false);
+    setIsRadioOpen(false);
     setShowResults(true);
     setShowLikes(false);
     try {
@@ -110,6 +183,8 @@ export default function App() {
     try {
       const data = await fetchWindyWebcams();
       setCameras(data);
+      setIsEarthOpen(false);
+      setIsRadioOpen(false);
       setShowResults(true);
       setShowLikes(false);
     } catch (error) {
@@ -135,17 +210,9 @@ export default function App() {
   };
 
   const containerStyle = { 
+    '--bg-image': (!showResults && !showLikes && !isEarthOpen && !isRadioOpen) ? `url(${localBackgroundImg})` : "none",
     filter: `brightness(${brightness}%)`, 
-    display: 'flex', 
-    flexDirection: 'row',
-    height: '100vh',
-    width: '100vw',
     backgroundColor: '#050505',
-    backgroundImage: (!showResults && !showLikes) ? `url(${localBackgroundImg})` : "none",
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    overflow: 'hidden'
   };
 
   return (
@@ -154,41 +221,44 @@ export default function App() {
       {/* Sidebar natively incorporated inside flex container layout */}
       <aside 
         className="sidebar"
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
-        style={{ width: isSidebarExpanded ? '240px' : '72px', height: '100vh', flexShrink: 0, position: 'relative', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(20, 25, 40, 0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px 12px', transition: 'width 0.3s ease', boxShadow: 'inset -2px 0 20px rgba(0,0,0,0.3)' }}
+        style={{ width: isSidebarExpanded ? '240px' : '72px', gap: '12px', background: 'rgba(20, 25, 40, 0.6)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px 12px', boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.05), 0 0 40px rgba(0,0,0,0.35)' }}
       >
          <div className={`flex items-center w-full mb-6 transition-all duration-300 ${isSidebarExpanded ? 'justify-between px-2' : 'justify-center'}`}>
-           <Menu size={24} onClick={() => setIsPinned(!isPinned)} className="text-slate-300 hover:text-white transition-transform duration-300 cursor-pointer shrink-0 hover:scale-110" title="Toggle Sidebar" />
+           <Menu size={24} onClick={() => setIsPinned(!isPinned)} className={`text-slate-300 hover:text-white transition-all duration-250 ease-in-out cursor-pointer shrink-0 hover:scale-[1.05] ${isSidebarExpanded ? 'rotate-0' : '-rotate-90'}`} title="Toggle Sidebar" />
          </div>
 
-         <button onClick={() => {setShowResults(false); setShowLikes(false);}} className={`flex items-center gap-4 w-full text-white transition-all outline-none hover:scale-[1.03] group overflow-hidden ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: 'linear-gradient(90deg, #00c6ff, #0072ff)', border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 0 25px rgba(0,114,255,0.4)', transition: 'all 0.25s ease' }}>
-            <Home size={20} className="text-white shrink-0 transition-transform duration-250 group-hover:scale-110" />
-            <span className={`tracking-wide whitespace-nowrap transition-opacity duration-250 font-semibold ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>Home</span>
+         <button onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}} className={`${getCurrentIndex() === 0 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 0 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 0 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 0 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
+            <Home size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 0 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
          </button>
 
-         <button onClick={handleOpenLiveCameras} className={`flex items-center gap-4 w-full text-slate-400 hover:text-white transition-all outline-none hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10 group overflow-hidden ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.25s ease' }}>
-            {isGridLoading ? <Loader2 size={20} className="animate-spin text-slate-400 shrink-0" /> : <Camera size={20} className="text-slate-400 shrink-0 transition-transform duration-250 group-hover:scale-110 group-hover:text-white" />}
-            <span className={`tracking-wide whitespace-nowrap transition-opacity duration-250 font-medium ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>Live Cameras</span>
+         <button onClick={handleOpenLiveCameras} className={`${getCurrentIndex() === 1 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 1 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 1 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 1 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
+            {isGridLoading ? <Loader2 size={20} className="animate-spin text-slate-400 shrink-0" /> : <Camera size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 1 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />}
          </button>
 
-         <button onClick={() => setIsRadioOpen(true)} className={`flex items-center gap-4 w-full text-slate-400 hover:text-white transition-all outline-none hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10 group overflow-hidden ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.25s ease' }}>
-            <Radio size={20} className="text-slate-400 shrink-0 transition-transform duration-250 group-hover:scale-110 group-hover:text-white" />
-            <span className={`tracking-wide whitespace-nowrap transition-opacity duration-250 font-medium ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>Live Radio</span>
+         <button onClick={() => {setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false);}} className={`${getCurrentIndex() === 2 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 2 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 2 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 2 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
+            <Radio size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 2 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
          </button>
 
-         <button onClick={() => setIsEarthOpen(true)} className={`flex items-center gap-4 w-full text-slate-400 hover:text-white transition-all outline-none hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10 group overflow-hidden ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.25s ease' }}>
-            <Map size={20} className="text-slate-400 shrink-0 transition-transform duration-250 group-hover:scale-110 group-hover:text-white" />
-            <span className={`tracking-wide whitespace-nowrap transition-opacity duration-250 font-medium ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>Live Earth</span>
+         <button onClick={() => {setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);}} className={`${getCurrentIndex() === 3 ? 'pulse-glow-btn' : ''} relative flex items-center justify-center w-full transition-all outline-none hover:scale-[1.02] hover:translate-x-[3px] group ${getCurrentIndex() === 3 ? 'text-white' : 'text-slate-400 hover:text-white hover:shadow-[0_0_20px_rgba(0,150,255,0.2)] hover:bg-white/10'}`} style={{ height: '48px', paddingLeft: '12px', paddingRight: '12px', borderRadius: '14px', background: getCurrentIndex() === 3 ? 'linear-gradient(90deg, #2dd4bf, #3b82f6)' : 'rgba(255,255,255,0.05)', border: getCurrentIndex() === 3 ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'all 0.35s ease' }}>
+            <Map size={20} className={`shrink-0 transition-transform duration-250 group-hover:scale-110 ${getCurrentIndex() === 3 ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+         </button>
+
+         {/* Floating Collapse Button on Edge */}
+         <button 
+           onClick={() => setIsPinned(!isPinned)}
+           className="absolute -right-3 top-32 w-6 h-6 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all z-[200]"
+           style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', boxShadow: '0 0 10px rgba(59,130,246,0.5)', border: '1px solid rgba(255,255,255,0.3)' }}
+         >
+           {isSidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
          </button>
       </aside>
 
       {/* Main Content Vertical Layout Wrapper */}
-      <div className="content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <div className="content">
         
-        <nav className="navbar navbar-main" style={{ height: '70px', width: '100%', position: 'relative', flexShrink: 0, zIndex: 100, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center' }}>
+        <nav className="navbar navbar-main" style={{ height: '70px', width: '100%', position: 'relative', flexShrink: 0, zIndex: 100, background: 'rgba(20,25,40,0.55)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center' }}>
           {/* 📸 CUSTOM LOGO SECTION */}
-          <div className="custom-logo" onClick={() => {setShowResults(false); setShowLikes(false);}}>
+          <div className="custom-logo" onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}}>
             <div className="logo-shutter">
               <Globe className="logo-inner-globe" size={20} />
             </div>
@@ -223,7 +293,7 @@ export default function App() {
               </AnimatePresence>
             </div>
 
-            <Heart className={`nav-icon ${showLikes ? 'text-red-500 fill-red-500' : ''}`} onClick={() => setShowLikes(true)} />
+            <Heart className={`nav-icon ${showLikes ? 'text-red-500 fill-red-500' : ''}`} onClick={() => {setShowLikes(true); setIsEarthOpen(false); setIsRadioOpen(false); setShowResults(false);}} />
             <Bell className="nav-icon" />
             
             {user ? (
@@ -270,34 +340,40 @@ export default function App() {
         </nav>
 
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} /> 
-        <LiveRadioModal isOpen={isRadioOpen} onClose={() => setIsRadioOpen(false)} />
-        <LiveEarthModal isOpen={isEarthOpen} onClose={() => setIsEarthOpen(false)} />
 
         {/* Dynamic Main Navigated Content Container */}
         <main className="main-content" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" custom={scrollDirection.current}>
         {showLikes ? (
-          <motion.main key="likes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="results-container">
+          <motion.main key="likes" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="results-container">
             <h2 className="section-title">❤️ Liked Streams</h2>
             <div className="yt-grid">
               {likedVideos.map(cam => <VideoTile key={cam.id} cam={cam} isLiked={true} onLike={() => toggleLike(cam)} />)}
             </div>
           </motion.main>
+        ) : isEarthOpen ? (
+          <motion.main key="earth" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
+            <LiveEarthModal />
+          </motion.main>
+        ) : isRadioOpen ? (
+          <motion.main key="radio" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
+            <LiveRadioModal />
+          </motion.main>
         ) : !showResults ? (
-          <motion.header key="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hero-full-view">
-            <div className="hero-dark-mask" style={{ background: 'linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, #050505 100%)' }}></div>
+          <motion.header key="hero" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="hero-full-view">
+            <div className="hero-dark-mask" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.75))' }}></div>
             
-            <div className="hero-content-main flex flex-col items-center">
+            <div className="hero-content-main flex flex-col items-center" style={{ maxWidth: '900px', margin: '0 auto' }}>
               <motion.div 
-                  className="logo-shutter shadow-[0_0_40px_rgba(59,130,246,0.6)]" 
+                  className="logo-shutter shadow-[0_0_40px_rgba(255,120,50,0.5)]" 
                   style={{width: '90px', height: '90px', margin: '0 auto 20px', background: 'linear-gradient(135deg, #3b82f6, #ef4444, #f59e0b)', border: '2px solid rgba(255,255,255,0.2)'}}
-                  animate={{ y: [0, -15, 0] }} 
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  animate={{ y: [0, -6, 0] }} 
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               >
                   <Globe size={45} color="white" />
               </motion.div>
               
-              <h1 className="hero-title-colorful text-center">{text}<span className="blink">|</span></h1>
+              <h1 className="hero-title-colorful text-center" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>{text}<span className="blink">|</span></h1>
               <p className="hero-subtitle">Explore live cameras from cities, beaches, streets and landmarks worldwide.</p>
               
               <div className="flex gap-6 mt-6 flex-wrap justify-center">
@@ -314,7 +390,7 @@ export default function App() {
             </div>
           </motion.header>
         ) : (
-          <motion.main key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="results-container">
+          <motion.main key="results" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="results-container">
             <div className="yt-grid">
               {cameras.map(cam => <VideoTile key={cam.id} cam={cam} isLiked={likedVideos.some(v => v.id === cam.id)} onLike={() => toggleLike(cam)} />)}
             </div>
