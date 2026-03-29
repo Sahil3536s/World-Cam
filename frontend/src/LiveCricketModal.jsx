@@ -672,7 +672,7 @@ function MatchDetail({ match }) {
         )}
       </div>
 
-      {/* Tabs */
+      {/* Tabs */}
       <div className="ipl-tabs-bar">
         {TABS.map(tab => (
           <button
