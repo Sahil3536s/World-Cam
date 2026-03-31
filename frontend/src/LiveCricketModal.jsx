@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /* ─────────────────────────────────────────────
@@ -7,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TEAM_META = {
   MI:  { name: 'Mumbai Indians',       abbr: 'MI',  color: '#005DA0', logo: '🔵' },
   CSK: { name: 'Chennai Super Kings',  abbr: 'CSK', color: '#F5A623', logo: '🟡' },
-  RCB: { name: 'Royal Challengers B.', abbr: 'RCB', color: '#C8102E', logo: '🔴' },
+  RCB: { name: 'Royal Challengers Bengaluru', abbr: 'RCB', color: '#C8102E', logo: '🔴' },
   KKR: { name: 'Kolkata Knight Riders',abbr: 'KKR', color: '#3A225D', logo: '🟣' },
   SRH: { name: 'Sunrisers Hyderabad', abbr: 'SRH',  color: '#FF822A', logo: '🟠' },
   DC:  { name: 'Delhi Capitals',       abbr: 'DC',  color: '#0078BC', logo: '💙' },
@@ -15,6 +16,18 @@ const TEAM_META = {
   RR:  { name: 'Rajasthan Royals',     abbr: 'RR',  color: '#EA1A85', logo: '💗' },
   GT:  { name: 'Gujarat Titans',       abbr: 'GT',  color: '#1C4670', logo: '🔷' },
   LSG: { name: 'Lucknow Super Giants', abbr: 'LSG', color: '#A72B2A', logo: '🟥' },
+};
+
+const getTeamMeta = (key) => {
+  const meta = TEAM_META[key];
+  if (meta) return meta;
+  // Dynamic fallback for unknown teams
+  return { 
+    name: key || 'Unknown Team', 
+    abbr: key ? String(key).substring(0, 3).toUpperCase() : 'IPL', 
+    color: '#64748b', 
+    logo: '🏏' 
+  };
 };
 
 /*
@@ -41,131 +54,82 @@ function resolveStatus(match) {
 }
 
 const seedMatches = () => [
-  /* ── LIVE (started today ~15:47 IST, end ~19:47) ─────────────── */
   {
     id: 1,
-    startISO: '2026-03-29T09:30:00Z',
-    team1: 'MI',  score1: '189/4', overs1: '17.2',
-    team2: 'CSK', score2: '165/6', overs2: '16.0',
-    venue: 'Wankhede Stadium, Mumbai', date: '29 Mar 2026', time: '15:00',
-    crr: '9.82', rrr: '13.20',
-    toss: { winner: 'MI', decision: 'bat' },
-    commentary: [
-      '17.2: Bumrah bowls a yorker — full and straight. Jadeja fails to get under it. OUT! Caught behind.',
-      '17.1: Slower ball takes the outer edge. Wide of third slip — four!',
-      '16.6: Brilliant over by Jadeja — only 5 runs from it.'
-    ],
-    topBatsmen: [{ name: 'Rohit Sharma', runs: 78, balls: 48, fours: 9, sixes: 4 }, { name: 'Ishan Kishan', runs: 45, balls: 32, fours: 5, sixes: 2 }],
-    topBowlers: [{ name: 'Jadeja', overs: '4-0-28-2' }, { name: 'Chahar', overs: '3-0-31-1' }],
+    startISO: '2026-03-28T14:00:00Z', // 19:30 IST
+    team1: 'RCB', score1: '203/4', overs1: '15.4', // RCB won in 15.4 ov
+    team2: 'SRH', score2: '201/9', overs2: '20.0',
+    venue: 'M. Chinnaswamy Stadium, Bengaluru', date: '28 Mar 2026', time: '19:30',
+    toss: { winner: 'RCB', decision: 'field' },
+    winner: 'RCB',
+    commentary: ['15.4: Siraj to Cummins, 1 run, RCB WIN!','15.3: SIX! Kohli finishes in style.'],
+    topBatsmen: [{ name: 'Kohli', runs: 101, balls: 62 }, { name: 'Faf', runs: 45, balls: 30 }],
+    topBowlers: [{ name: 'Siraj', overs: '4-0-32-3' }],
   },
   {
     id: 2,
-    startISO: '2026-03-29T07:30:00Z',
-    team1: 'RCB', score1: '142/2', overs1: '13.4',
-    team2: 'KKR', score2: null, overs2: null,
-    venue: 'Eden Gardens, Kolkata', date: '29 Mar 2026', time: '13:00',
-    crr: '10.39', rrr: null,
-    toss: { winner: 'KKR', decision: 'field' },
-    commentary: [
-      '13.4: Kohli drives straight — classic cover drive for four!',
-      '13.3: Short delivery, Faf pulls it over midwicket — SIX!',
-      '13.2: Dot ball — tight line outside off stump.'
-    ],
-    topBatsmen: [{ name: 'Virat Kohli', runs: 63, balls: 41, fours: 7, sixes: 3 }, { name: 'Faf du Plessis', runs: 55, balls: 38, fours: 6, sixes: 2 }],
-    topBowlers: [{ name: 'Starc', overs: '3-0-22-1' }, { name: 'Russell', overs: '2-0-19-0' }],
+    startISO: '2026-03-29T14:00:00Z', // 19:30 IST (Matches current Local Time)
+    team1: 'MI',  score1: '0/0', overs1: '0.0', // MI is fielding
+    team2: 'KKR', score2: '25/0', overs2: '2.4', // KKR is batting (Current score)
+    venue: 'Wankhede Stadium, Mumbai', date: '29 Mar 2026', time: '19:30',
+    toss: { winner: 'MI', decision: 'field' },
+    crr: '9.38',
+    commentary: ['2.4: Bumrah to Salt, NO RUN, leading edge!','2.3: FOUR! Salt plays a gorgeous drive.'],
+    topBatsmen: [{ name: 'Salt', runs: 18, balls: 10 }, { name: 'Iyer', runs: 6, balls: 6 }],
+    topBowlers: [{ name: 'Bumrah', overs: '1.4-0-12-0' }],
   },
-
-  /* ── UPCOMING ─────────────────────────────────────────────────── */
   {
     id: 3,
     startISO: '2026-03-30T14:00:00Z',
-    team1: 'SRH', score1: null, overs1: null,
-    team2: 'DC',  score2: null, overs2: null,
-    venue: 'Rajiv Gandhi Intl. Stadium, Hyderabad', date: '30 Mar 2026', time: '19:30',
-    toss: null,
-    crr: null, rrr: null, commentary: [], topBatsmen: [], topBowlers: [],
+    team1: 'RR',  score1: null, overs1: null,
+    team2: 'CSK', score2: null, overs2: null,
+    venue: 'ACA Stadium, Guwahati', date: '30 Mar 2026', time: '19:30',
+    toss: null, commentary: [], topBatsmen: [], topBowlers: [],
   },
   {
     id: 4,
-    startISO: '2026-03-31T10:00:00Z',
+    startISO: '2026-03-31T14:00:00Z',
     team1: 'PBKS', score1: null, overs1: null,
-    team2: 'RR',   score2: null, overs2: null,
-    venue: 'Punjab Cricket Association Stadium, Mohali', date: '31 Mar 2026', time: '15:30',
-    toss: null,
-    crr: null, rrr: null, commentary: [], topBatsmen: [], topBowlers: [],
+    team2: 'GT', score2: null, overs2: null,
+    venue: 'PCA New Stadium, Mullanpur', date: '31 Mar 2026', time: '19:30',
+    toss: null, commentary: [], topBatsmen: [], topBowlers: [],
   },
   {
     id: 5,
     startISO: '2026-04-01T14:00:00Z',
-    team1: 'GT',  score1: null, overs1: null,
-    team2: 'LSG', score2: null, overs2: null,
-    venue: 'Narendra Modi Stadium, Ahmedabad', date: '1 Apr 2026', time: '19:30',
-    toss: null,
-    crr: null, rrr: null, commentary: [], topBatsmen: [], topBowlers: [],
-  },
-
-  /* ── COMPLETED (historical — no startISO needed) ────────────── */
-  {
-    id: 6, status: 'COMPLETED', winner: 'KKR',
-    team1: 'KKR', score1: '215/4', overs1: '20.0',
-    team2: 'MI',  score2: '212/6', overs2: '20.0',
-    venue: 'Eden Gardens, Kolkata', date: '28 Mar 2026', time: '19:30',
-    toss: { winner: 'MI', decision: 'bat' },
-    crr: null, rrr: null, commentary: [],
-    topBatsmen: [{ name: 'Russell', runs: 92, balls: 38, fours: 6, sixes: 8 }],
-    topBowlers: [{ name: 'Narine', overs: '4-0-22-3' }],
-  },
-  {
-    id: 7, status: 'COMPLETED', winner: 'RCB',
-    team1: 'RCB', score1: '203/4', overs1: '20.0',
-    team2: 'SRH', score2: '201/9', overs2: '20.0',
-    venue: 'M. Chinnaswamy Stadium, Bengaluru', date: '27 Mar 2026', time: '19:30',
-    toss: { winner: 'SRH', decision: 'field' },
-    crr: null, rrr: null, commentary: [],
-    topBatsmen: [{ name: 'Kohli', runs: 101, balls: 62, fours: 9, sixes: 5 }],
-    topBowlers: [{ name: 'Natarajan', overs: '4-0-45-2' }],
-  },
-  {
-    id: 8, status: 'COMPLETED', winner: 'CSK',
-    team1: 'CSK', score1: '178/5', overs1: '20.0',
-    team2: 'PBKS', score2: '174/8', overs2: '20.0',
-    venue: 'MA Chidambaram Stadium, Chennai', date: '26 Mar 2026', time: '19:30',
-    toss: { winner: 'CSK', decision: 'bat' },
-    crr: null, rrr: null, commentary: [],
-    topBatsmen: [{ name: 'Gaikwad', runs: 82, balls: 53, fours: 8, sixes: 3 }],
-    topBowlers: [{ name: 'Pathirana', overs: '4-0-24-3' }],
-  },
-  {
-    id: 9, status: 'COMPLETED', winner: 'DC',
-    team1: 'DC', score1: '196/6', overs1: '20.0',
-    team2: 'LSG', score2: '190/7', overs2: '20.0',
-    venue: 'Arun Jaitley Stadium, Delhi', date: '25 Mar 2026', time: '15:30',
-    toss: { winner: 'LSG', decision: 'field' },
-    crr: null, rrr: null, commentary: [],
-    topBatsmen: [{ name: 'Warner', runs: 87, balls: 55, fours: 10, sixes: 4 }],
-    topBowlers: [{ name: 'Axar', overs: '4-0-28-2' }],
-  },
+    team1: 'LSG', score1: null, overs1: null,
+    team2: 'DC', score2: null, overs2: null,
+    venue: 'Ekana Cricket Stadium, Lucknow', date: '01 Apr 2026', time: '19:30',
+    toss: null, commentary: [], topBatsmen: [], topBowlers: [],
+  }
 ];
 
 /* ─────────────────────────
    Simulate live score drift
+   (Simple randomized logic)
 ──────────────────────────*/
 const TABS = ['Summary', 'Scorecard', 'Live Blog', 'Commentary', 'Stats', 'Graphs'];
 
 function simulateLiveUpdate(matches) {
   return matches.map(m => {
-    // Only update score if the match is genuinely LIVE right now
+    // Only update score if the match is genuinely LIVE
     if (resolveStatus(m) !== 'LIVE') return m;
-    const addRuns = () => Math.floor(Math.random() * 14); // 0-13 runs per poll
-    const [r1, w1] = (m.score1 || '0/0').split('/').map(Number);
-    const newR1 = r1 + addRuns();
-    const [o, b] = m.overs1.split('.').map(Number);
+
+    // Simulate batting team update (KKR is batting in Match 2)
+    const [r, w] = (m.score2 || '0/0').split('/').map(Number);
+    const [o, b] = (m.overs2 || '0.0').split('.').map(Number);
+    
+    if (o >= 20) return m; // Innings over
+
+    const newR = r + (Math.random() > 0.8 ? 4 : Math.random() > 0.95 ? 6 : Math.random() > 0.5 ? 1 : 0);
     const newB = b >= 5 ? 0 : b + 1;
     const newO = b >= 5 ? o + 1 : o;
+
     return {
       ...m,
-      score1: `${newR1}/${w1}`,
-      overs1: `${newO}.${newB}`,
+      score2: `${newR}/${w}`,
+      overs2: `${newO}.${newB}`,
+      crr: (newR / (newO + newB/6)).toFixed(2)
     };
   });
 }
@@ -305,11 +269,11 @@ function TossInfo({ toss, team1Key, team2Key }) {
 }
 
 function ScoreDisplay({ score, overs, isWinner, teamColor }) {
-  const [animState, setAnimState] = useState('idle'); // idle | bump | settle
+  const [animState, setAnimState] = useState('idle');
   const prevScore = useRef(score);
 
   useEffect(() => {
-    if (score !== prevScore.current) {
+    if (score && score !== prevScore.current) {
       setAnimState('bump');
       const t1 = setTimeout(() => setAnimState('settle'), 250);
       const t2 = setTimeout(() => setAnimState('idle'), 800);
@@ -319,19 +283,16 @@ function ScoreDisplay({ score, overs, isWinner, teamColor }) {
   }, [score]);
 
   return (
-    <div
-      className={`ipl-score-display ipl-score-anim-${animState}`}
-      style={{ borderColor: isWinner ? teamColor : 'transparent' }}
-    >
-      <span className="ipl-score-runs">{score || '—'}</span>
-      {overs && <span className="ipl-score-overs">({overs} ov)</span>}
+    <div className={`ipl-score-display ipl-score-${animState}`} style={{ borderColor: isWinner ? teamColor : 'transparent' }}>
+      <span className="ipl-score-runs">{score || '0/0'}</span>
+      <span className="ipl-score-overs">({overs || '0.0'} ov)</span>
     </div>
   );
 }
 
 function MatchCard({ match, onClick, isSelected }) {
-  const t1 = TEAM_META[match.team1];
-  const t2 = TEAM_META[match.team2];
+  const t1 = getTeamMeta(match.team1);
+  const t2 = getTeamMeta(match.team2);
   const resolvedStatus = resolveStatus(match);
   const isLive     = resolvedStatus === 'LIVE';
   const isFinished = resolvedStatus === 'FINISHED';
@@ -380,7 +341,7 @@ function MatchCard({ match, onClick, isSelected }) {
       </div>
 
       {isFinished && match.winner && (
-        <div className="ipl-card-result">{TEAM_META[match.winner]?.name} won</div>
+        <div className="ipl-card-result">{getTeamMeta(match.winner).name} won</div>
       )}
     </motion.div>
   );
@@ -390,8 +351,8 @@ function MatchCard({ match, onClick, isSelected }) {
    TAB CONTENT PANELS
 ──────────────────────────*/
 function SummaryTab({ match }) {
-  const t1 = TEAM_META[match.team1];
-  const t2 = TEAM_META[match.team2];
+  const t1 = getTeamMeta(match.team1);
+  const t2 = getTeamMeta(match.team2);
   return (
     <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="ipl-tab-panel">
       {match.topBatsmen.length > 0 && (
@@ -433,11 +394,14 @@ function SummaryTab({ match }) {
         </div>
       )}
 
-      {resolveStatus(match) === 'FINISHED' && match.winner && (
-        <div className="ipl-result-banner" style={{ borderColor: TEAM_META[match.winner]?.color }}>
-          🏆 {TEAM_META[match.winner]?.name} won the match!
-        </div>
-      )}
+      {resolveStatus(match) === 'FINISHED' && match.winner && (() => {
+        const winnerMeta = getTeamMeta(match.winner);
+        return (
+          <div className="ipl-result-banner" style={{ borderColor: winnerMeta.color }}>
+            🏆 {winnerMeta.name} won the match!
+          </div>
+        );
+      })()}
 
       {resolveStatus(match) === 'UPCOMING' && (
         <div className="ipl-upcoming-info">
@@ -469,8 +433,8 @@ function CommentaryTab({ match }) {
 }
 
 function StatsTab({ match }) {
-  const t1 = TEAM_META[match.team1];
-  const t2 = TEAM_META[match.team2];
+  const t1 = getTeamMeta(match.team1);
+  const t2 = getTeamMeta(match.team2);
   const [r1] = (match.score1 || '0/0').split('/').map(Number);
   const [r2] = (match.score2 || '0/0').split('/').map(Number);
   const total = r1 + r2 || 1;
@@ -512,7 +476,7 @@ function StatsTab({ match }) {
 }
 
 function GraphsTab({ match }) {
-  const t1 = TEAM_META[match.team1];
+  const t1 = getTeamMeta(match.team1);
   const overData = [12, 8, 14, 11, 17, 9, 15, 22, 13, 19, 8, 14, 18, 21, 16, 11, 24, 13];
   const max = Math.max(...overData);
 
@@ -532,7 +496,7 @@ function GraphsTab({ match }) {
 }
 
 function ScorecardTab({ match }) {
-  const t1 = TEAM_META[match.team1];
+  const t1 = getTeamMeta(match.team1);
   return (
     <motion.div key="scorecard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="ipl-tab-panel">
       <h4 className="ipl-section-label">🏏 Batting — {t1.name}</h4>
@@ -588,8 +552,8 @@ function LiveBlogTab({ match }) {
 ──────────────────────────*/
 function MatchDetail({ match }) {
   const [activeTab, setActiveTab] = useState('Summary');
-  const t1 = TEAM_META[match.team1];
-  const t2 = TEAM_META[match.team2];
+  const t1 = getTeamMeta(match.team1);
+  const t2 = getTeamMeta(match.team2);
   const resolvedStatus = resolveStatus(match);
   const isLive     = resolvedStatus === 'LIVE';
   const isFinished = resolvedStatus === 'FINISHED';
@@ -737,25 +701,101 @@ function MatchList({ matches, selectedId, onSelect }) {
 /* ─────────────────────────
    ROOT COMPONENT
 ──────────────────────────*/
-export default function LiveCricketModal() {
-  const [matches, setMatches] = useState(seedMatches);
-  const [selectedMatch, setSelectedMatch] = useState(() => seedMatches()[0]);
-  const lastUpdateRef = useRef(Date.now());
+/* ─────────────────────────
+   API MAPPING HELPER
+──────────────────────────*/
+const mapApiToMatch = (apiMatch) => {
+  if (!apiMatch || !apiMatch.teams) return null;
 
-  /* Live polling every 5 seconds */
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMatches(prev => {
-        const updated = simulateLiveUpdate(prev);
-        // keep selected match in sync
-        setSelectedMatch(sel => {
-          const fresh = updated.find(m => m.id === sel.id);
-          return fresh || sel;
+  // Helper to find team key by name
+  const findKey = (name) => {
+    if (!name) return 'IPL';
+    const n = String(name).toLowerCase();
+    for (const [key, meta] of Object.entries(TEAM_META)) {
+      if (n.includes(meta.name.toLowerCase())) return key;
+    }
+    // If not found in our IPL meta, use the first word or the name itself
+    return String(name).split(' ')[0].toUpperCase().substring(0, 4);
+  };
+
+  const t1 = findKey(apiMatch.teams[0]);
+  const t2 = findKey(apiMatch.teams[1]);
+
+  // Extract scores for each team from the innings array
+  let s1 = null, o1 = null, s2 = null, o2 = null;
+  
+  if (apiMatch.score && Array.isArray(apiMatch.score) && apiMatch.score.length > 0) {
+    apiMatch.score.forEach(inn => {
+      if (!inn.inning) return;
+      const innLower = inn.inning.toLowerCase();
+      const team1Name = (apiMatch.teams[0] || '').toLowerCase();
+      const team2Name = (apiMatch.teams[1] || '').toLowerCase();
+
+      if (team1Name && innLower.includes(team1Name)) {
+        s1 = `${inn.r}/${inn.w}`;
+        o1 = `${inn.o}`;
+      } else if (team2Name && innLower.includes(team2Name)) {
+        s2 = `${inn.r}/${inn.w}`;
+        o2 = `${inn.o}`;
+      }
+    });
+  }
+
+  // Force state if "Live" is in status
+  const isMatchLive = apiMatch.status?.toLowerCase().includes('live') || apiMatch.status?.toLowerCase().includes('play in progress');
+  const isMatchFinished = apiMatch.status?.toLowerCase().includes('won by') || apiMatch.status?.toLowerCase().includes('finished');
+
+  return {
+    id: apiMatch.id,
+    team1: t1,
+    team2: t2,
+    score1: s1,
+    overs1: o1,
+    score2: s2,
+    overs2: o2,
+    venue: apiMatch.venue || 'Unknown Venue',
+    date: apiMatch.date || '',
+    time: apiMatch.name ? (apiMatch.name.split(',')[1]?.trim() || '') : '',
+    status: isMatchLive ? 'LIVE' : (isMatchFinished ? 'FINISHED' : 'UPCOMING'),
+    rawStatus: apiMatch.status || '',
+    rawName: apiMatch.name || 'Unknown Match',
+    commentary: apiMatch.status ? [apiMatch.status] : [],
+    topBatsmen: [], 
+    topBowlers: [],
+    toss: null // The current Matches API rarely gives toss directly
+  };
+};
+
+export default function LiveCricketModal() {
+  const [matches, setMatches] = useState([]);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchLiveScores = async () => {
+    try {
+      const res = await axios.get('http://localhost:5050/api/cricket/live');
+      const mapped = res.data
+        .map(mapApiToMatch)
+        .filter(m => m !== null)
+        .filter(m => {
+          const name = (m.rawName || '').toLowerCase();
+          return name.includes('ipl') || name.includes('indian premier league');
         });
-        return updated;
-      });
-      lastUpdateRef.current = Date.now();
-    }, 5000);
+      setMatches(mapped);
+      if (!selectedMatch && mapped.length > 0) setSelectedMatch(mapped[0]);
+      setError(null);
+    } catch (err) {
+      console.error("API Fetch Error:", err);
+      setError("Failed to fetch live scores");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveScores();
+    const interval = setInterval(fetchLiveScores, 15000); // 15s polling
     return () => clearInterval(interval);
   }, []);
 
@@ -765,6 +805,7 @@ export default function LiveCricketModal() {
 
   // Keep selected match in sync when poll fires
   useEffect(() => {
+    if (!selectedMatch || matches.length === 0) return;
     const synced = matches.find(m => m.id === selectedMatch.id);
     if (synced) setSelectedMatch(synced);
   }, [matches]);
@@ -772,17 +813,52 @@ export default function LiveCricketModal() {
   return (
     <>
       <style>{IPL_CSS}</style>
-      <div className="ipl-root no-scrollbar">
+      <div className="ipl-root">
         {/* Left: match list */}
         <div className="ipl-list-col no-scrollbar">
-          <MatchList matches={matches} selectedId={selectedMatch.id} onSelect={handleSelect} />
+          <div className="ipl-season-header">
+            <span className="ipl-season-logo">🏆</span>
+            <div>
+              <div className="ipl-season-title">INDIAN PREMIER LEAGUE</div>
+              <div className="ipl-season-sub">Season 2026 · Official Live Feed</div>
+            </div>
+          </div>
+          
+          {loading && (
+            <div className="ipl-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: '15px' }}>
+              <div className="ipl-spinner" style={{ width: '30px', height: '30px', border: '3px solid rgba(34,211,238,0.1)', borderTopColor: '#22d3ee', borderRadius: '50%', animation: 'ipl-spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Connecting to Live API...</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="ipl-error-msg" style={{ padding: '20px', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center', background: 'rgba(239,68,68,0.05)', borderRadius: '12px', margin: '20px' }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <MatchList 
+              matches={matches} 
+              onSelect={handleSelect} 
+              selectedId={selectedMatch?.id} 
+            />
+          )}
         </div>
 
         {/* Right: Detail panel */}
         <div className="ipl-detail-col no-scrollbar">
-          <AnimatePresence mode="wait">
-            <MatchDetail key={selectedMatch.id} match={selectedMatch} />
-          </AnimatePresence>
+          {selectedMatch ? (
+            <AnimatePresence mode="wait">
+              <MatchDetail key={selectedMatch.id} match={selectedMatch} />
+            </AnimatePresence>
+          ) : !loading && (
+            <div className="ipl-empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '10px', opacity: 0.5 }}>
+              <span style={{ fontSize: '40px' }}>🏏</span>
+              <div style={{ color: '#fff', fontWeight: 700 }}>Select a match</div>
+              <div style={{ color: '#64748b', fontSize: '0.8rem' }}>Live scores from CricketData.org</div>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -793,6 +869,55 @@ export default function LiveCricketModal() {
    SCOPED CSS (injected)
 ──────────────────────────*/
 const IPL_CSS = `
+@keyframes ipl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ipl-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+}
+
+.ipl-spinner {
+  width: 32px;
+  height: 32px;
+  border: 4px solid rgba(34,211,238,0.1);
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: ipl-spin 1s linear infinite;
+}
+
+.ipl-error-msg {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  margin: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.ipl-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  text-align: center;
+  color: #64748b;
+  padding: 40px;
+}
+
+.ipl-empty-icon { font-size: 48px; margin-bottom: 8px; }
+.ipl-empty-state h3 { color: #fff; font-size: 1.1rem; margin-bottom: 4px; }
+.ipl-empty-state p { font-size: 0.85rem; }
+
 /* no-scrollbar utility */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }

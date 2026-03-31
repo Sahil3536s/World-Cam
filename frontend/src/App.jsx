@@ -4,8 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import localBackgroundImg from './Images/Background.png';
+import localBackgroundImg from './Images/Background.jpg';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+
+const imageModules = import.meta.glob('./Images/*.{jpg,png,jpeg,webp}', { eager: true, import: 'default' });
+const allImages = Object.values(imageModules);
+const slideshowImages = allImages.length > 0 ? allImages : [localBackgroundImg];
+
 import AuthModal from './AuthModal'; 
 import LiveRadioModal from './LiveRadioModal';
 import LiveCameraGrid from './LiveCameraGrid';
@@ -36,8 +41,16 @@ export default function App() {
   const [isPinned, setIsPinned] = useState(window.innerWidth >= 768);
   const [isHovered, setIsHovered] = useState(false);
   const [bgImage, setBgImage] = useState(localBackgroundImg);
+  const [slideIndex, setSlideIndex] = useState(0);
   const fullText = "Watch the World Live";
   
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideIndex(prev => (prev + 1) % slideshowImages.length);
+    }, 8000); // Updated to 8 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -98,11 +111,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // 🖱️ Scroll-to-navigate: smooth directional view cycling
-  const scrollCooldown = useRef(false);
   const scrollDirection = useRef(1); // 1 = down, -1 = up
-  const rafId = useRef(null);
-  const accumulatedDelta = useRef(0);
 
   const getCurrentIndex = () => {
     if (isCricketOpen) return 4;
@@ -133,40 +142,7 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    const processScroll = () => {
-      const delta = accumulatedDelta.current;
-      accumulatedDelta.current = 0;
-      rafId.current = null;
 
-      if (scrollCooldown.current || Math.abs(delta) < 40) return;
-
-      const current = getCurrentIndex();
-      let next = current;
-
-      if (delta > 0 && current < 4) { next = current + 1; scrollDirection.current = 1; }
-      else if (delta < 0 && current > 0) { next = current - 1; scrollDirection.current = -1; }
-
-      if (next !== current) {
-        scrollCooldown.current = true;
-        navigateTo(next);
-        setTimeout(() => { scrollCooldown.current = false; }, 700);
-      }
-    };
-
-    const handleWheel = (e) => {
-      accumulatedDelta.current += e.deltaY;
-      if (!rafId.current) {
-        rafId.current = requestAnimationFrame(processScroll);
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
-    };
-  }, [showResults, showLikes, isRadioOpen, isEarthOpen]);
 
   // Smooth directional transition variants
   const pageVariants = {
@@ -222,15 +198,31 @@ export default function App() {
     } catch (error) { console.error("Firebase Error", error); }
   };
 
+  const currentBgUrl = (!showResults && !showLikes && !isEarthOpen && !isRadioOpen && !isCricketOpen) 
+    ? `url(${slideshowImages[slideIndex]})` 
+    : (showResults ? `url(${bgImage})` : "none");
+
   const containerStyle = { 
-    '--bg-image': (!showResults && !showLikes && !isEarthOpen && !isRadioOpen && !isCricketOpen) ? `url(${bgImage})` : "none",
     filter: `brightness(${brightness}%)`, 
     backgroundColor: '#050505',
   };
 
   return (
     <div className="worldcam-full-container layout" style={containerStyle}>
-      
+      <AnimatePresence>
+        {currentBgUrl !== "none" && (
+          <motion.div
+            key={currentBgUrl}
+            className="animated-bg-layer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2, ease: "easeInOut" }} // Slower, simpler fade
+            style={{ backgroundImage: currentBgUrl }}
+          />
+        )}
+      </AnimatePresence>
+
        {/* Sidebar natively incorporated inside flex container layout */}
        <aside 
         className="sidebar"
@@ -409,7 +401,6 @@ export default function App() {
           </motion.main>
         ) : !showResults ? (
           <motion.header key="hero" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="hero-full-view">
-            <div className="hero-dark-mask" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.75))' }}></div>
             
             <div className="hero-content-main flex flex-col items-center" style={{ maxWidth: '900px', margin: '0 auto' }}>
               <motion.div 
@@ -429,10 +420,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="scroll-indicator">
-              <span className="text-sm uppercase tracking-widest font-semibold opacity-80">Scroll to explore</span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-            </div>
+
           </motion.header>
         ) : (
           <motion.main key="results" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="results-container">

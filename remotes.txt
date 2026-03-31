@@ -1,0 +1,2 @@
+﻿origin	https://github.com/Sahil3536s/World-Cam (fetch)
+origin	https://github.com/Sahil3536s/World-Cam (push)
