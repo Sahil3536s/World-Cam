@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy, ArrowRight } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.jpg';
@@ -38,8 +38,6 @@ export default function App() {
   const [isEarthOpen, setIsEarthOpen] = useState(false);
   const [isCricketOpen, setIsCricketOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isPinned, setIsPinned] = useState(window.innerWidth >= 768);
-  const [isHovered, setIsHovered] = useState(false);
   const [bgImage, setBgImage] = useState(localBackgroundImg);
   const [slideIndex, setSlideIndex] = useState(0);
   const fullText = "Watch the World Live";
@@ -53,15 +51,12 @@ export default function App() {
 
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) setIsPinned(false);
+      setIsMobile(window.innerWidth < 768);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isSidebarExpanded = isPinned || isHovered;
 
   // 🖱️ Refs to detect clicks outside of menus
   const accountRef = useRef(null);
@@ -221,75 +216,7 @@ export default function App() {
             style={{ backgroundImage: currentBgUrl }}
           />
         )}
-      </AnimatePresence>
-
-       {/* Sidebar natively incorporated inside flex container layout */}
-       <aside 
-        className="sidebar"
-        style={{ width: isSidebarExpanded ? '240px' : '72px', gap: '10px', padding: '24px 12px' }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-         <div className={`flex items-center w-full mb-4 pb-4 transition-all duration-300 ${isSidebarExpanded ? 'justify-between px-2' : 'justify-center'}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-           <Menu size={24} onClick={() => setIsPinned(!isPinned)} className={`text-slate-300 hover:text-white transition-all duration-250 ease-in-out cursor-pointer shrink-0 hover:scale-[1.05] ${isSidebarExpanded ? 'rotate-0' : '-rotate-90'}`} title="Toggle Sidebar" />
-         </div>
-
-         <button onClick={() => navigateTo(0)} className={`nav-btn ${getCurrentIndex() === 0 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
-            <Home size={20} className="shrink-0" />
-            <AnimatePresence>
-              {isSidebarExpanded && (
-                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Home</motion.span>
-              )}
-            </AnimatePresence>
-         </button>
-
-         <button onClick={() => navigateTo(1)} className={`nav-btn ${getCurrentIndex() === 1 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
-            {isGridLoading ? <Loader2 size={20} className="animate-spin shrink-0" /> : <Camera size={20} className="shrink-0" />}
-            <AnimatePresence>
-              {isSidebarExpanded && (
-                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Gallery</motion.span>
-              )}
-            </AnimatePresence>
-         </button>
-
-         <button onClick={() => navigateTo(2)} className={`nav-btn ${getCurrentIndex() === 2 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
-            <Radio size={20} className="shrink-0" />
-            <AnimatePresence>
-              {isSidebarExpanded && (
-                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Live</motion.span>
-              )}
-            </AnimatePresence>
-         </button>
-
-         <button onClick={() => navigateTo(3)} className={`nav-btn ${getCurrentIndex() === 3 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
-            <Map size={20} className="shrink-0" />
-            <AnimatePresence>
-              {isSidebarExpanded && (
-                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Map</motion.span>
-              )}
-            </AnimatePresence>
-         </button>
-
-         <button onClick={() => navigateTo(4)} className={`nav-btn ${getCurrentIndex() === 4 ? 'active' : 'inactive'}`} style={{ height: '48px' }}>
-            <Trophy size={20} className="shrink-0" />
-            <AnimatePresence>
-              {isSidebarExpanded && (
-                <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="sidebar-label">Cricket</motion.span>
-              )}
-            </AnimatePresence>
-         </button>
-
-         {/* Floating Collapse Button on Edge */}
-         <button 
-           onClick={() => setIsPinned(!isPinned)}
-           className="absolute -right-3 top-32 w-6 h-6 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all z-[200]"
-           style={{ background: 'linear-gradient(90deg, #2dd4bf, #3b82f6)', boxShadow: '0 0 10px rgba(59,130,246,0.3)', border: '1px solid rgba(255,255,255,0.2)' }}
-         >
-           {isPinned ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-         </button>
-      </aside>
-
-      {/* Main Content Vertical Layout Wrapper */}
+      </AnimatePresence>      {/* Main Content Vertical Layout Wrapper */}
       <div className="content">
         
         <nav className="navbar navbar-main" style={{ width: '100%' }}>
@@ -412,11 +339,20 @@ export default function App() {
                   <Globe size={45} color="white" />
               </motion.div>
               
+              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex justify-center mb-4">
+                <div className="live-badge">
+                  <span className="live-dot" />
+                  LIVE CAMERAS
+                </div>
+              </motion.div>
+              
               <h1 className="hero-title-colorful text-center" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>{text}<span className="blink">|</span></h1>
               <p className="hero-subtitle">Explore live cameras from cities, beaches, streets and landmarks worldwide.</p>
               
               <div className="flex mt-6 justify-center">
-                <button className="btn-explore-glow" onClick={() => handleSearch('live webcam')}>Start Exploring</button>
+                <button className="btn-explore-glow flex items-center" onClick={() => handleSearch('live webcam')}>
+                  Start Exploring <ArrowRight size={20} className="ml-2 arrow-icon" />
+                </button>
               </div>
             </div>
 
@@ -431,6 +367,79 @@ export default function App() {
         )}
           </AnimatePresence>
         </main>
+
+        {/* ⚓ FLOATING MACOS DOCK */}
+        <div className="bottom-dock-wrapper">
+          <motion.div 
+            className="bottom-dock"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+          >
+            <button className="dock-btn" data-label="Menu" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
+                <Menu size={22} />
+            </button>
+            <div className="dock-divider" />
+            
+            <button 
+              className={`dock-btn ${getCurrentIndex() === 0 ? 'active' : ''}`} 
+              data-label="Explore" 
+              onClick={() => navigateTo(0)}
+            >
+                <Globe size={22} />
+            </button>
+
+            <button 
+              className={`dock-btn ${getCurrentIndex() === 1 ? 'active' : ''}`} 
+              data-label="Cameras" 
+              onClick={() => navigateTo(1)}
+            >
+                {isGridLoading ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+            </button>
+
+            <button 
+              className={`dock-btn ${isRadioOpen ? 'active' : ''}`} 
+              data-label="Live Radio" 
+              onClick={() => navigateTo(2)}
+            >
+                <Radio size={22} />
+            </button>
+
+            <button 
+              className={`dock-btn ${isEarthOpen ? 'active' : ''}`} 
+              data-label="Live Map" 
+              onClick={() => navigateTo(3)}
+            >
+                <Map size={22} />
+            </button>
+
+            <button 
+              className={`dock-btn ${isCricketOpen ? 'active' : ''}`} 
+              data-label="Cricket" 
+              onClick={() => navigateTo(4)}
+            >
+                <Trophy size={22} />
+            </button>
+
+            <div className="dock-divider" />
+
+            <button className="dock-btn" data-label="Settings" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+                <Settings size={22} />
+            </button>
+
+            {user ? (
+               <button className="dock-btn" data-label="Account" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold">
+                    {user.email[0].toUpperCase()}
+                  </div>
+               </button>
+            ) : (
+              <button className="dock-btn" data-label="Login" onClick={() => setIsAuthOpen(true)}>
+                  <User size={22} />
+              </button>
+            )}
+          </motion.div>
+        </div>
       </div>
     </div>
   );
