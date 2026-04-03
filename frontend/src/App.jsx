@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy, ArrowRight } from 'lucide-react';
+import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy, ArrowRight, Building2, Umbrella, Mountain, Car, MapPin, Plane, TreePine, TrendingUp, Info } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.jpg';
@@ -33,6 +33,9 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isRadioOpen, setIsRadioOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isMainMenuOpen, setIsMainMenuOpen] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [brightness, setBrightness] = useState(100);
   const [text, setText] = useState("");
   const [isGridLoading, setIsGridLoading] = useState(false);
@@ -62,6 +65,7 @@ export default function App() {
   // 🖱️ Refs to detect clicks outside of menus
   const accountRef = useRef(null);
   const settingsRef = useRef(null);
+  const mainMenuRef = useRef(null);
 
   // 🛡️ Auth Observer & Auto-Open Login
   useEffect(() => {
@@ -90,6 +94,10 @@ export default function App() {
       }
       if (settingsRef.current && !settingsRef.current.contains(event.target)) {
         setIsSettingsOpen(false);
+      }
+      if (mainMenuRef.current && !mainMenuRef.current.contains(event.target)) {
+        setIsMainMenuOpen(false);
+        setShowCategories(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -308,6 +316,46 @@ export default function App() {
           </div>
         </nav>
 
+        <AnimatePresence>
+          {isAboutOpen && (
+            <div className="auth-overlay" onClick={() => setIsAboutOpen(false)}>
+              <motion.div 
+                className="auth-modal-glass about-modal"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button className="auth-close-btn" onClick={() => setIsAboutOpen(false)}><X size={20} /></button>
+                <div className="auth-header">
+                  <div className="auth-icon-badge" style={{background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)'}}>
+                    <Globe size={28} color="white" />
+                  </div>
+                  <h2 className="auth-title">WorldCam</h2>
+                  <p className="auth-subtitle" style={{marginTop: '8px'}}>Watch live cameras from cities, beaches, streets and landmarks worldwide.</p>
+                </div>
+                
+                <div className="about-features">
+                  <h3 className="about-features-title">Features</h3>
+                  <ul className="about-features-list">
+                    <li><Globe size={14}/> Live cameras worldwide</li>
+                    <li><Radio size={14}/> Real-time streaming</li>
+                    <li><LayoutGrid size={14}/> Category browsing</li>
+                    <li><Heart size={14}/> Favorites</li>
+                    <li><Map size={14}/> Map view</li>
+                    <li><Flame size={14}/> Live radio</li>
+                  </ul>
+                </div>
+
+                <div className="about-footer">
+                  <span className="about-version">Version 1.0</span>
+                  <span className="about-dev">Developed by Sahil Sehrawat</span>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} /> 
 
         {/* Dynamic Main Navigated Content Container */}
@@ -337,10 +385,10 @@ export default function App() {
             
             <div className="hero-content-main flex flex-col items-center" style={{ maxWidth: '900px', margin: '0 auto' }}>
               <motion.div 
-                  className="logo-shutter shadow-[0_0_40px_rgba(255,120,50,0.5)]" 
-                  style={{width: '90px', height: '90px', margin: '0 auto 20px', background: 'linear-gradient(135deg, #3b82f6, #ef4444, #f59e0b)', border: '2px solid rgba(255,255,255,0.2)'}}
-                  animate={{ y: [0, -6, 0] }} 
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  className="logo-shutter" 
+                  style={{width: '90px', height: '90px', margin: '0 auto 20px', background: 'linear-gradient(135deg, #3b82f6, #a855f7, #ec4899)', border: '1px solid rgba(255,255,255,0.3)'}}
+                  animate={{ y: [0, -20, 0], boxShadow: ['0 10px 30px rgba(168, 85, 247, 0.3)', '0 25px 50px rgba(168, 85, 247, 0.7)', '0 10px 30px rgba(168, 85, 247, 0.3)'] }} 
+                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               >
                   <Globe size={45} color="white" />
               </motion.div>
@@ -352,7 +400,7 @@ export default function App() {
                 </div>
               </motion.div>
               
-              <h1 className="hero-title-colorful text-center" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>{text}<span className="blink">|</span></h1>
+              <h1 className="hero-title-colorful text-center">{text}<span className="blink">|</span></h1>
               <p className="hero-subtitle">Explore live cameras from cities, beaches, streets and landmarks worldwide.</p>
               
               <div className="flex mt-6 justify-center">
@@ -382,9 +430,51 @@ export default function App() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: 'spring', damping: 20, stiffness: 100 }}
           >
-            <button className="dock-btn" data-label="Menu" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                <Menu size={22} />
-            </button>
+            <div className="dock-menu-container" ref={mainMenuRef}>
+              <button className="dock-btn" data-label="Menu" onClick={() => setIsMainMenuOpen(!isMainMenuOpen)}>
+                  <Menu size={26} />
+              </button>
+
+              <AnimatePresence>
+                {isMainMenuOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }} 
+                    animate={{ opacity: 1, y: 0, scale: 1 }} 
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }} 
+                    transition={{ duration: 0.2 }}
+                    className="main-menu-dropdown glass"
+                  >
+                    {showCategories ? (
+                      <div className="menu-submenu">
+                        <div className="submenu-header" onClick={() => setShowCategories(false)}>
+                          <ChevronLeft size={16} /> <span>Back</span>
+                        </div>
+                        <div className="menu-divider" />
+                        <div className="menu-item" onClick={() => { handleSearch('city webcam'); setIsMainMenuOpen(false); }}><Building2 size={16} /> Cities</div>
+                        <div className="menu-item" onClick={() => { handleSearch('beach webcam'); setIsMainMenuOpen(false); }}><Umbrella size={16} /> Beaches</div>
+                        <div className="menu-item" onClick={() => { handleSearch('mountain webcam'); setIsMainMenuOpen(false); }}><Mountain size={16} /> Mountains</div>
+                        <div className="menu-item" onClick={() => { handleSearch('street webcam'); setIsMainMenuOpen(false); }}><Car size={16} /> Streets</div>
+                        <div className="menu-item" onClick={() => { handleSearch('landmark webcam'); setIsMainMenuOpen(false); }}><MapPin size={16} /> Landmarks</div>
+                        <div className="menu-item" onClick={() => { handleSearch('airport webcam'); setIsMainMenuOpen(false); }}><Plane size={16} /> Airports</div>
+                        <div className="menu-item" onClick={() => { handleSearch('nature webcam'); setIsMainMenuOpen(false); }}><TreePine size={16} /> Nature</div>
+                        <div className="menu-item" onClick={() => { handleSearch('trending webcam'); setIsMainMenuOpen(false); }}><TrendingUp size={16} /> Trending</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="menu-item" onClick={() => setShowCategories(true)}>
+                          <LayoutGrid size={16} /> Categories
+                          <ChevronRight size={16} className="ml-auto" />
+                        </div>
+                        <div className="menu-divider" />
+                        <div className="menu-item" onClick={() => { setIsAboutOpen(true); setIsMainMenuOpen(false); }}>
+                          <Info size={16} /> About WorldCam
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="dock-divider" />
             
             <button 
@@ -392,7 +482,7 @@ export default function App() {
               data-label="Explore" 
               onClick={() => navigateTo(0)}
             >
-                <Globe size={22} />
+                <Globe size={26} />
             </button>
 
             <button 
@@ -400,7 +490,7 @@ export default function App() {
               data-label="Cameras" 
               onClick={() => navigateTo(1)}
             >
-                {isGridLoading ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                {isGridLoading ? <Loader2 size={26} className="animate-spin" /> : <Camera size={26} />}
             </button>
 
             <button 
@@ -408,7 +498,7 @@ export default function App() {
               data-label="Live Radio" 
               onClick={() => navigateTo(2)}
             >
-                <Radio size={22} />
+                <Radio size={26} />
             </button>
 
             <button 
@@ -416,7 +506,7 @@ export default function App() {
               data-label="Live Map" 
               onClick={() => navigateTo(3)}
             >
-                <Map size={22} />
+                <Map size={26} />
             </button>
 
             <button 
@@ -424,26 +514,10 @@ export default function App() {
               data-label="Cricket" 
               onClick={() => navigateTo(4)}
             >
-                <Trophy size={22} />
+                <Trophy size={26} />
             </button>
 
-            <div className="dock-divider" />
 
-            <button className="dock-btn" data-label="Settings" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
-                <Settings size={22} />
-            </button>
-
-            {user ? (
-               <button className="dock-btn" data-label="Account" onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}>
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold">
-                    {user.email[0].toUpperCase()}
-                  </div>
-               </button>
-            ) : (
-              <button className="dock-btn" data-label="Login" onClick={() => setIsAuthOpen(true)}>
-                  <User size={22} />
-              </button>
-            )}
           </motion.div>
         </div>
       </div>
