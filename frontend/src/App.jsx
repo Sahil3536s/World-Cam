@@ -7,9 +7,10 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.jpg';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
-const imageModules = import.meta.glob('./Images/*.{jpg,png,jpeg,webp}', { eager: true, import: 'default' });
-const allImages = Object.values(imageModules);
+const imageModules = import.meta.glob('./Images/*.{jpg,png,jpeg,webp}', { eager: true, query: '?url', import: 'default' });
+const allImages = Object.values(imageModules).map(val => (typeof val === 'string' ? val : val?.default || val));
 const slideshowImages = allImages.length > 0 ? allImages : [localBackgroundImg];
+console.log("Loaded images:", slideshowImages);
 
 import AuthModal from './AuthModal'; 
 import LiveRadioModal from './LiveRadioModal';
@@ -45,7 +46,7 @@ export default function App() {
   useEffect(() => {
     const timer = setInterval(() => {
       setSlideIndex(prev => (prev + 1) % slideshowImages.length);
-    }, 8000); // Updated to 8 seconds
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -204,6 +205,11 @@ export default function App() {
 
   return (
     <div className="worldcam-full-container layout" style={containerStyle}>
+      <div style={{ display: 'none' }}>
+        {slideshowImages.map((src, idx) => (
+           <img key={idx} src={src} alt="preload" />
+        ))}
+      </div>
       <AnimatePresence>
         {currentBgUrl !== "none" && (
           <motion.div
