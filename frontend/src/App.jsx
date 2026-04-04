@@ -387,7 +387,7 @@ export default function App() {
               <motion.div 
                   className="logo-shutter" 
                   style={{width: '90px', height: '90px', margin: '0 auto 20px', background: 'linear-gradient(135deg, #3b82f6, #a855f7, #ec4899)', border: '1px solid rgba(255,255,255,0.3)'}}
-                  animate={{ y: [0, -20, 0], boxShadow: ['0 10px 30px rgba(168, 85, 247, 0.3)', '0 25px 50px rgba(168, 85, 247, 0.7)', '0 10px 30px rgba(168, 85, 247, 0.3)'] }} 
+                  animate={{ y: [0, -20, 0], boxShadow: ['0 10px 20px rgba(168, 85, 247, 0.1)', '0 25px 40px rgba(168, 85, 247, 0.3)', '0 10px 20px rgba(168, 85, 247, 0.1)'] }} 
                   transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               >
                   <Globe size={45} color="white" />
@@ -403,7 +403,7 @@ export default function App() {
               <h1 className="hero-title-colorful text-center">{text}<span className="blink">|</span></h1>
               <p className="hero-subtitle">Explore live cameras from cities, beaches, streets and landmarks worldwide.</p>
               
-              <div className="flex mt-6 justify-center">
+              <div className="flex mt-6 mb-12 justify-center">
                 <button className="btn-explore-glow flex items-center" onClick={() => handleSearch('live webcam')}>
                   Start Exploring <ArrowRight size={20} className="ml-2 arrow-icon" />
                 </button>
@@ -475,7 +475,6 @@ export default function App() {
                 )}
               </AnimatePresence>
             </div>
-            <div className="dock-divider" />
             
             <button 
               className={`dock-btn ${getCurrentIndex() === 0 ? 'active' : ''}`} 
