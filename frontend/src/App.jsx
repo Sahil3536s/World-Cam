@@ -6,6 +6,7 @@ import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.jpg';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import logoImg from './Images/Logo.png';
 
 const imageModules = import.meta.glob('./Images/*.{jpg,png,jpeg,webp}', { eager: true, query: '?url', import: 'default' });
 const allImages = Object.values(imageModules).map(val => (typeof val === 'string' ? val : val?.default || val));
@@ -17,6 +18,7 @@ import LiveRadioModal from './LiveRadioModal';
 import LiveCameraGrid from './LiveCameraGrid';
 import LiveEarthModal from './LiveEarthModal';
 import LiveCricketModal from './LiveCricketModal';
+import LiveShareMarketModal from './LiveShareMarketModal';
 import LiveEarthButton from './LiveEarthButton';
 import { fetchWindyWebcams } from './mockApi';
 import './App.css';
@@ -41,6 +43,7 @@ export default function App() {
   const [isGridLoading, setIsGridLoading] = useState(false);
   const [isEarthOpen, setIsEarthOpen] = useState(false);
   const [isCricketOpen, setIsCricketOpen] = useState(false);
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [bgImage, setBgImage] = useState(localBackgroundImg);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -118,6 +121,7 @@ export default function App() {
   const scrollDirection = useRef(1); // 1 = down, -1 = up
 
   const getCurrentIndex = () => {
+    if (isMarketOpen) return 5;
     if (isCricketOpen) return 4;
     if (isEarthOpen) return 3;
     if (isRadioOpen) return 2;
@@ -128,20 +132,23 @@ export default function App() {
   const navigateTo = (index) => {
     switch (index) {
       case 0:
-        setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false); setIsCricketOpen(false);
+        setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false); setIsCricketOpen(false); setIsMarketOpen(false);
         break;
       case 1:
         handleOpenLiveCameras();
-        setIsCricketOpen(false);
+        setIsCricketOpen(false); setIsMarketOpen(false);
         break;
       case 2:
-        setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false);
+        setIsRadioOpen(true); setIsEarthOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false); setIsMarketOpen(false);
         break;
       case 3:
-        setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false);
+        setIsEarthOpen(true); setIsRadioOpen(false); setShowResults(false); setShowLikes(false); setIsCricketOpen(false); setIsMarketOpen(false);
         break;
       case 4:
-        setIsCricketOpen(true); setIsEarthOpen(false); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);
+        setIsCricketOpen(true); setIsEarthOpen(false); setIsRadioOpen(false); setShowResults(false); setShowLikes(false); setIsMarketOpen(false);
+        break;
+      case 5:
+        setIsMarketOpen(true); setIsCricketOpen(false); setIsEarthOpen(false); setIsRadioOpen(false); setShowResults(false); setShowLikes(false);
         break;
     }
   };
@@ -208,7 +215,7 @@ export default function App() {
 
   const containerStyle = { 
     filter: `brightness(${brightness}%)`, 
-    backgroundColor: '#050505',
+    backgroundColor: '#020617',
   };
 
   return (
@@ -236,9 +243,7 @@ export default function App() {
         <nav className="navbar navbar-main" style={{ width: '100%' }}>
           {/* 📸 CUSTOM LOGO SECTION */}
           <div className="custom-logo" onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}}>
-            <div className="logo-shutter">
-              <Globe className="logo-inner-globe" size={20} />
-            </div>
+            <img src={logoImg} alt="WorldCam Logo" style={{ height: '64px', width: 'auto', marginRight: '8px' }} />
             <span className="brand-text">World<span>Cam</span></span>
           </div>
           
@@ -373,26 +378,21 @@ export default function App() {
             <LiveEarthModal />
           </motion.main>
         ) : isRadioOpen ? (
-          <motion.main key="radio" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
+          <motion.main key="radio" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" style={{ flex: 1, width: '100%', height: '100%', position: 'relative' }}>
             <LiveRadioModal />
           </motion.main>
         ) : isCricketOpen ? (
           <motion.main key="cricket" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
             <LiveCricketModal />
           </motion.main>
+        ) : isMarketOpen ? (
+          <motion.main key="market" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="flex-1 w-full h-full relative">
+            <LiveShareMarketModal />
+          </motion.main>
         ) : !showResults ? (
           <motion.header key="hero" custom={scrollDirection.current} variants={pageVariants} initial="initial" animate="animate" exit="exit" className="hero-full-view">
             
             <div className="hero-content-main flex flex-col items-center" style={{ maxWidth: '900px', margin: '0 auto' }}>
-              <motion.div 
-                  className="logo-shutter" 
-                  style={{width: '90px', height: '90px', margin: '0 auto 20px', background: 'linear-gradient(135deg, #3b82f6, #a855f7, #ec4899)', border: '1px solid rgba(255,255,255,0.3)'}}
-                  animate={{ y: [0, -20, 0], boxShadow: ['0 10px 20px rgba(168, 85, 247, 0.1)', '0 25px 40px rgba(168, 85, 247, 0.3)', '0 10px 20px rgba(168, 85, 247, 0.1)'] }} 
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                  <Globe size={45} color="white" />
-              </motion.div>
-              
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex justify-center mb-4">
                 <div className="live-badge">
                   <span className="live-dot" />
@@ -514,6 +514,14 @@ export default function App() {
               onClick={() => navigateTo(4)}
             >
                 <Trophy size={26} />
+            </button>
+
+            <button 
+              className={`dock-btn ${isMarketOpen ? 'active' : ''}`} 
+              data-label="Live Share Market" 
+              onClick={() => navigateTo(5)}
+            >
+                <TrendingUp size={26} />
             </button>
 
 

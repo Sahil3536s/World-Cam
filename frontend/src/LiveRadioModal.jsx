@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Radio, Play, Pause, Signal, Globe as GlobeIcon, Zap } from 'lucide-react';
+import { Radio, Play, Pause, Zap } from 'lucide-react';
 import Globe from 'react-globe.gl';
 import { RadioBrowserApi } from 'radio-browser-api';
 
@@ -9,6 +9,7 @@ export default function LiveRadioModal() {
   const [playingStation, setPlayingStation] = useState(null);
   const audioRef = useRef(null);
   const globeRef = useRef(null);
+  const containerRef = useRef(null);
 
   // 🚀 FETCH RADIOS
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function LiveRadioModal() {
       const api = new RadioBrowserApi('WorldCamApp');
       const results = await api.searchStations({
         hasGeoInfo: true,
-        limit: 40, // Optimized for performance and visual clarity
+        limit: 40,
         hideBroken: true
       });
 
@@ -59,191 +60,410 @@ export default function LiveRadioModal() {
     setPlayingStation(null);
   };
 
-  // 🛰️ SIGNAL ARCS (Neon pulsing lines)
+  // 🛰️ SIGNAL ARCS
   const arcsData = useMemo(() => {
     if (stations.length < 2) return [];
-    // Connect stations in a network-like pattern
-    return stations.slice(0, 30).map((s, i) => {
+    return stations.slice(0, 25).map((s, i) => {
       const next = stations[(i + 5) % stations.length];
       return {
         startLat: s.lat,
         startLng: s.lng,
         endLat: next.lat,
         endLng: next.lng,
-        color: ['#3b82f6', '#0ea5e9']
+        color: ['rgba(77,166,255,0.5)', 'rgba(59,130,246,0.15)']
       };
     });
   }, [stations]);
 
-  // 🌍 GLOBE CONFIG
+  // 🌍 GLOBE CONFIG — Photorealistic slow rotation
   useEffect(() => {
     if (globeRef.current) {
-      globeRef.current.controls().autoRotate = true;
-      globeRef.current.controls().autoRotateSpeed = 0.5;
-      globeRef.current.pointOfView({ altitude: 2.2 });
+      const controls = globeRef.current.controls();
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.3;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.enableZoom = true;
+      controls.minDistance = 200;
+      controls.maxDistance = 600;
+      globeRef.current.pointOfView({ altitude: 2.0 });
     }
   }, [stations]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
+    <div ref={containerRef} style={styles.container}>
       
-      {/* 🌌 IMMERSIVE SPACE BACKGROUND */}
-      <div 
-        className="absolute inset-0 z-0 opacity-60"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1506318137071-a8e063b4bcc0?auto=format&fit=crop&q=80&w=2000')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      />
-      <div className="absolute inset-0 z-1 bg-gradient-radial from-transparent via-black/40 to-black/90 pointer-events-none" />
+      {/* 🌌 SPACE BACKGROUND — Dark gradient, no heavy noise */}
+      <div style={styles.spaceBg} />
+      <div style={styles.spaceOverlay} />
 
-      {/* 🛰️ HEADER OVERLAY */}
-      <div className="absolute top-10 left-10 z-20 pointer-events-none">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-blue-500/20 border border-blue-500/30 rounded-2xl backdrop-blur-xl">
-              <Radio className="text-blue-400 animate-pulse" size={24} />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-white tracking-widest uppercase">Deep Space Radio</h2>
-              <p className="text-[10px] font-bold text-blue-400/70 tracking-[0.3em] uppercase">Interstellar Broadcasting Network</p>
-            </div>
+      {/* ✨ Subtle starfield (CSS-based, lightweight) */}
+      <div style={styles.starfield} />
+
+      {/* 📡 CENTERED HEADER — Title + Subtitle above globe */}
+      <div style={styles.headerContainer}>
+        <motion.div 
+          initial={{ opacity: 0, y: -30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          style={styles.headerInner}
+        >
+          <div style={styles.radioIconWrap}>
+            <Radio style={styles.radioIcon} size={20} />
           </div>
-          <AnimatePresence>
-            {playingStation && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} 
-                className="mt-6 p-4 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-2xl flex items-center gap-4 border-l-4 border-l-blue-500 shadow-2xl pointer-events-auto"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-                  <Activity size={20} className="text-white animate-bounce" />
-                </div>
-                <div>
-                  <div className="text-sm font-black text-white truncate max-w-[200px]">{playingStation.name}</div>
-                  <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{playingStation.tags}</div>
-                </div>
-                <button onClick={stopAudio} className="ml-4 p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all"><Pause size={16}/></button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <h1 style={styles.title}>DEEP SPACE RADIO</h1>
+          <p style={styles.subtitle}>Interstellar Broadcasting Network</p>
         </motion.div>
       </div>
 
-      {/* 🔮 THE GLOBE */}
-      <div className="z-10 w-full h-full cursor-grab active:cursor-grabbing">
+      {/* 🎵 NOW PLAYING — Centered floating card */}
+      <AnimatePresence>
+        {playingStation && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.95 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: -15, scale: 0.95 }}
+            transition={{ duration: 0.35 }}
+            style={styles.nowPlaying}
+          >
+            <div style={styles.npPulse}>
+              <Activity size={18} style={{ color: 'white' }} />
+            </div>
+            <div style={styles.npInfo}>
+              <div style={styles.npName}>{playingStation.name}</div>
+              <div style={styles.npTag}>{playingStation.tags}</div>
+            </div>
+            <button onClick={stopAudio} style={styles.npStop}>
+              <Pause size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔮 THE GLOBE — Photorealistic Earth */}
+      <div style={styles.globeContainer}>
         <Globe
           ref={globeRef}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
           backgroundColor="rgba(0,0,0,0)"
           
           showAtmosphere={true}
-          atmosphereColor="#3b82f6"
-          atmosphereAltitude={0.15}
+          atmosphereColor="rgba(77,166,255,0.6)"
+          atmosphereAltitude={0.18}
 
-          // Points (Broadcasters)
+          // Points
           pointsData={stations}
           pointLat="lat"
           pointLng="lng"
-          pointColor={() => "#3b82f6"}
-          pointAltitude={0.01}
-          pointRadius={0.4}
+          pointColor={() => "#4DA6FF"}
+          pointAltitude={0.012}
+          pointRadius={0.35}
           pointsMerge={false}
 
-          // Arcs (Signal Lines)
+          // Arcs
           arcsData={arcsData}
           arcColor="color"
-          arcDashLength={0.4}
+          arcDashLength={0.5}
           arcDashGap={4}
-          arcDashAnimateTime={2000}
-          arcStroke={0.5}
+          arcDashAnimateTime={2500}
+          arcStroke={0.4}
 
-          // Floating HTML Elements (Cards)
-          htmlElementsData={stations.slice(0, 15)} // Show subset of cards for cleaner UI
+          // Floating HTML Cards
+          htmlElementsData={stations.slice(0, 12)}
           htmlLat="lat"
           htmlLng="lng"
           htmlElement={(d) => {
             const el = document.createElement('div');
             el.innerHTML = `
-              <div class="radio-card group">
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="station-name">${d.name}</span>
-                    <span class="genre">${d.tags}</span>
-                  </div>
-                  <div class="card-footer">
-                    <div class="signal-bar">
-                      <div class="signal-fill" style="width: ${Math.random() * 40 + 60}%"></div>
-                    </div>
-                    <button class="play-btn">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <div class="rc-card">
+                <div class="rc-inner">
+                  <div class="rc-name">${d.name}</div>
+                  <div class="rc-genre">${d.tags}</div>
+                  <div class="rc-footer">
+                    <div class="rc-signal"><div class="rc-signal-fill" style="width:${Math.random() * 35 + 60}%"></div></div>
+                    <button class="rc-play">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     </button>
                   </div>
                 </div>
-                <div class="card-glow"></div>
               </div>
             `;
-            el.querySelector('.play-btn').onclick = () => playStation(d);
+            el.querySelector('.rc-play').onclick = () => playStation(d);
             return el;
           }}
         />
       </div>
 
-      {/* 🎨 COMPACT CSS FOR FLOATING CARDS */}
+      {/* 🎨 SCOPED CSS */}
       <style>{`
-        .radio-card {
-          position: relative;
-          padding: 1px;
-          border-radius: 12px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        /* ─── Radio Cards — Refined Glassmorphism ─── */
+        .rc-card {
           transform: translate(-50%, -100%);
-          margin-top: -30px;
+          margin-top: -6px;
           pointer-events: auto;
+          transition: transform 0.3s ease, filter 0.3s ease;
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
         }
-        .radio-card:hover { border-color: #3b82f6; transform: translate(-50%, -105%) scale(1.1); }
-        
-        .card-inner {
-          background: rgba(15, 23, 42, 0.7);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          padding: 10px 14px;
-          border-radius: 12px;
-          width: 160px;
-          position: relative;
-          z-index: 2;
+        .rc-card:hover {
+          transform: translate(-50%, -106%) scale(1.05);
+          filter: drop-shadow(0 8px 24px rgba(59,130,246,0.2));
         }
-        .card-glow {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
-          z-index: 1;
-          opacity: 0;
-          transition: opacity 0.3s;
+        .rc-inner {
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 14px;
+          padding: 11px 14px;
+          width: 165px;
         }
-        .radio-card:hover .card-glow { opacity: 1; }
-
-        .station-name { display: block; font-size: 10px; font-weight: 900; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; margin-bottom: 2px; }
-        .genre { font-size: 8px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; }
-        
-        .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .signal-bar { width: 60px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        .signal-fill { height: 100%; background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
-        
-        .play-btn { width: 24px; height: 24px; background: #3b82f6; border-radius: 8px; display: flex; items-center: center; justify-content: center; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
-        .play-btn:hover { background: #60a5fa; transform: scale(1.1); }
-
-        /* Animation for Signal Arcs */
-        @keyframes pulseArc {
-          0% { opacity: 0.3; stroke-width: 0.5; }
-          50% { opacity: 1; stroke-width: 1.5; }
-          100% { opacity: 0.3; stroke-width: 0.5; }
+        .rc-name {
+          font-size: 10px;
+          font-weight: 800;
+          color: rgba(255,255,255,0.92);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 2px;
+          font-family: 'Inter', sans-serif;
+        }
+        .rc-genre {
+          font-size: 8px;
+          font-weight: 700;
+          color: rgba(77,166,255,0.8);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-family: 'Inter', sans-serif;
+        }
+        .rc-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 9px;
+          padding-top: 8px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .rc-signal {
+          width: 58px;
+          height: 2.5px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 3px;
+          overflow: hidden;
+        }
+        .rc-signal-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #3B82F6, #4DA6FF);
+          border-radius: 3px;
+        }
+        .rc-play {
+          width: 24px;
+          height: 24px;
+          background: rgba(59,130,246,0.85);
+          border-radius: 7px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+        }
+        .rc-play:hover {
+          background: rgba(77,166,255,0.95);
+          transform: scale(1.1);
         }
       `}</style>
     </div>
   );
 }
 
-// 🛰️ Missing Import Helper
-function Activity({ size, className }) {
-  return <Zap size={size} className={className} />;
+// 🛰️ Helper
+function Activity({ size, style }) {
+  return <Zap size={size} style={style} />;
 }
+
+// ═══════════════════════════════════════════
+// 🎨 INLINE STYLES — Apple Vision Pro Clean
+// ═══════════════════════════════════════════
+const styles = {
+  container: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    background: '#020617',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Deep space gradient background
+  spaceBg: {
+    position: 'absolute',
+    inset: 0,
+    background: 'radial-gradient(ellipse at 50% 40%, rgba(15,23,42,0.6) 0%, rgba(2,6,23,1) 70%)',
+    zIndex: 0,
+  },
+
+  // Soft vignette overlay
+  spaceOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'radial-gradient(circle at 50% 50%, transparent 30%, rgba(2,6,23,0.85) 100%)',
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+
+  // Subtle CSS starfield
+  starfield: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1,
+    pointerEvents: 'none',
+    opacity: 0.25,
+    backgroundImage: `
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 28% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1.2px 1.2px at 45% 25%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 72%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 78%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 8% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 8%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 35% 92%, rgba(255,255,255,0.3) 0%, transparent 100%)
+    `,
+    backgroundSize: '700px 500px',
+  },
+
+  // ─── Centered Header ───
+  headerContainer: {
+    position: 'absolute',
+    top: '18px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 30,
+    pointerEvents: 'none',
+    textAlign: 'center',
+  },
+  headerInner: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  radioIconWrap: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
+    background: 'rgba(59,130,246,0.12)',
+    border: '1px solid rgba(59,130,246,0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
+  },
+  radioIcon: {
+    color: '#4DA6FF',
+  },
+  title: {
+    fontSize: '1.6rem',
+    fontWeight: 800,
+    color: '#f1f5f9',
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+    margin: 0,
+    fontFamily: "'Inter', 'SF Pro Display', sans-serif",
+    textShadow: '0 0 40px rgba(77,166,255,0.15), 0 0 80px rgba(59,130,246,0.08)',
+  },
+  subtitle: {
+    fontSize: '0.68rem',
+    fontWeight: 600,
+    color: 'rgba(77,166,255,0.5)',
+    letterSpacing: '0.25em',
+    textTransform: 'uppercase',
+    margin: 0,
+    fontFamily: "'Inter', sans-serif",
+  },
+
+  // ─── Now Playing ───
+  nowPlaying: {
+    position: 'absolute',
+    bottom: '90px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 30,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    background: 'rgba(15,23,42,0.7)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '16px',
+    padding: '12px 18px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    pointerEvents: 'auto',
+  },
+  npPulse: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    background: 'rgba(59,130,246,0.85)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 0 16px rgba(59,130,246,0.35)',
+    flexShrink: 0,
+  },
+  npInfo: {
+    minWidth: 0,
+  },
+  npName: {
+    fontSize: '0.82rem',
+    fontWeight: 800,
+    color: '#f1f5f9',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: '180px',
+    fontFamily: "'Inter', sans-serif",
+  },
+  npTag: {
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    color: 'rgba(77,166,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.15em',
+    fontFamily: "'Inter', sans-serif",
+  },
+  npStop: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '10px',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: 'rgba(255,255,255,0.7)',
+    transition: 'all 0.25s ease',
+    flexShrink: 0,
+    padding: 0,
+  },
+
+  // ─── Globe ───
+  globeContainer: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'grab',
+  },
+};
