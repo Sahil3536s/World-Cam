@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Search, Heart, Bell, User, Globe, Flame, LayoutGrid, Settings, Sun, Maximize, X, Radio, Loader2, Map, Home, Camera, Menu, ChevronLeft, ChevronRight, Trophy, ArrowRight, Building2, Umbrella, Mountain, Car, MapPin, Plane, TreePine, TrendingUp, Info } from 'lucide-react';
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import localBackgroundImg from './Images/Background.jpg';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import logoImg from './Images/Logo.png';
+import loaderVideo from './Images/Logo2.mp4';
 
 const imageModules = import.meta.glob('./Images/*.{jpg,png,jpeg,webp}', { eager: true, query: '?url', import: 'default' });
 const allImages = Object.values(imageModules).map(val => (typeof val === 'string' ? val : val?.default || val));
@@ -47,6 +48,7 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [bgImage, setBgImage] = useState(localBackgroundImg);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [loaderPhase, setLoaderPhase] = useState(0);
   const fullText = "Watch the World Live";
   
   useEffect(() => {
@@ -220,6 +222,76 @@ export default function App() {
 
   return (
     <div className="worldcam-full-container layout" style={containerStyle}>
+      <LayoutGroup>
+      <AnimatePresence>
+        {loaderPhase < 2 && (
+          <motion.div
+            key="minimal-loader"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              backgroundColor: '#020617',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}
+          >
+            <AnimatePresence mode="wait">
+              {loaderPhase === 0 ? (
+                <motion.div
+                  key="video-phase"
+                  initial={{ opacity: 0, scale: 1.05 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <video 
+                    src={loaderVideo}
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    onEnded={() => setLoaderPhase(1)}
+                    onError={() => setLoaderPhase(1)}
+                    style={{ width: '100vw', height: '100vh', objectFit: 'cover' }}
+                  />
+                </motion.div>
+              ) : loaderPhase === 1 ? (
+                <motion.div
+                  key="title-phase"
+                  initial={{ opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 1.0, ease: "easeOut" }}
+                  onAnimationComplete={(definition) => {
+                    if (definition.opacity === 1) {
+                      setTimeout(() => setLoaderPhase(2), 1200);
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%', height: '100%'
+                  }}
+                >
+                  <motion.div layoutId="worldcam-logo-container">
+                    <span className="brand-text" style={{ fontSize: '4.5rem', fontWeight: 800 }}>
+                      World<span style={{ color: '#4DA6FF' }}>Cam</span>
+                    </span>
+                  </motion.div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div style={{ display: 'none' }}>
         {slideshowImages.map((src, idx) => (
            <img key={idx} src={src} alt="preload" />
@@ -243,8 +315,12 @@ export default function App() {
         <nav className="navbar navbar-main" style={{ width: '100%' }}>
           {/* 📸 CUSTOM LOGO SECTION */}
           <div className="custom-logo" onClick={() => {setShowResults(false); setShowLikes(false); setIsEarthOpen(false); setIsRadioOpen(false);}}>
-            <img src={logoImg} alt="WorldCam Logo" style={{ height: '64px', width: 'auto', marginRight: '8px' }} />
-            <span className="brand-text">World<span>Cam</span></span>
+            <img src={logoImg} alt="WorldCam Logo" style={{ opacity: loaderPhase === 2 ? 1 : 0, transition: 'opacity 0.6s ease 0.4s' }} />
+            {loaderPhase === 2 && (
+              <motion.div layoutId="worldcam-logo-container" style={{ display: 'flex', alignItems: 'center' }}>
+                <span className="brand-text">World<span>Cam</span></span>
+              </motion.div>
+            )}
           </div>
           
           <div className="nav-center">
@@ -528,6 +604,7 @@ export default function App() {
           </motion.div>
         </div>
       </div>
+      </LayoutGroup>
     </div>
   );
 }
